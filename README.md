@@ -74,7 +74,7 @@ Do that (needs Rust; `rust-toolchain.toml` pins 1.95.0) and you see `23 passed`.
 
 If the faucet or the public RPC is down, set `NEAR_ACCOUNT_ID` and `NEAR_PRIVATE_KEY` to an existing testnet account with at least 8 NEAR, and `NEAR_RPC_URL` to another testnet RPC endpoint.
 
-To rebuild the contract yourself: `npm run build:contract` (needs Rust). It runs `cargo build` for `wasm32-unknown-unknown` and then `wasm-opt`, and prints the size and sha256 of `res/leash.wasm`.
+To rebuild the contract yourself: `npm run build:contract` (needs Rust). It runs `cargo build` for `wasm32-unknown-unknown` and then `wasm-opt`, and prints the size and sha256 of `res/leash.wasm`. The committed file is 234,682 bytes, sha256 `da7571b4e080f192729bbfb2b5324461a0f1c0b1e5ea7a83423a086eea0057c6`. A rebuild from a clean copy on the build machine (Windows, Rust 1.95.0) gave the same hash; another platform may give a different one.
 
 ## A recorded run
 
