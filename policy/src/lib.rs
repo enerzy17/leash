@@ -38,7 +38,8 @@ pub struct Policy {
     /// Unix time in milliseconds after which the key can no longer pay.
     #[serde(default)]
     pub expires_at_ms: Option<u64>,
-    /// Consecutive denied payments that trip the key. 0 turns the tripwire off.
+    /// Denied payments that trip the key. 0 turns the tripwire off.
+    /// Strikes are not cleared by later allowed payments, only by the owner.
     pub max_strikes: u32,
 }
 
@@ -55,7 +56,9 @@ pub struct Usage {
     /// Total paid through owner approvals. Not counted against the limits.
     #[serde(with = "u128_dec")]
     pub approved_spent: u128,
-    /// Denied payments in a row. Resets on the next allowed payment.
+    /// Denied payments that count against the key since the owner last cleared them.
+    /// An allowed payment does not clear them: otherwise a thief could keep the
+    /// count low by mixing tiny allowed payments in between the denied ones.
     pub strikes: u32,
     pub allowed_count: u64,
     pub denied_count: u64,
@@ -202,7 +205,6 @@ impl Usage {
         }
         self.window_spent = self.window_spent.saturating_add(amount);
         self.lifetime_spent = self.lifetime_spent.saturating_add(amount);
-        self.strikes = 0;
         self.allowed_count += 1;
     }
 
@@ -514,18 +516,20 @@ mod tests {
     }
 
     #[test]
-    fn third_strike_in_a_row_trips_and_an_allowed_payment_resets_the_count() {
+    fn third_strike_trips_and_allowed_payments_in_between_do_not_clear_strikes() {
         let p = policy();
         let mut u = Usage::default();
         assert!(!u.record_deny(&p, Reason::ReceiverNotAllowed));
+        u.record_allow(&p, HOUR, 1);
+        assert_eq!(u.strikes, 1, "an allowed payment does not buy a strike back");
         assert!(!u.record_deny(&p, Reason::OverWindowLimit));
         u.record_allow(&p, HOUR, 1);
-        assert_eq!(u.strikes, 0);
-        assert!(!u.record_deny(&p, Reason::ReceiverNotAllowed));
-        assert!(!u.record_deny(&p, Reason::ReceiverNotAllowed));
+        u.record_allow(&p, HOUR, 1);
+        assert_eq!(u.strikes, 2);
         assert!(u.record_deny(&p, Reason::ReceiverNotAllowed));
         assert_eq!(u.strikes, 3);
-        assert_eq!(u.denied_count, 5);
+        assert_eq!(u.denied_count, 3);
+        assert_eq!(u.allowed_count, 3);
     }
 
     #[test]

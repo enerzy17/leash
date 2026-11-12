@@ -1,6 +1,7 @@
 // Small helpers around near-api-js: provider, testnet faucet, reading results.
 
 import { Account, JsonRpcProvider, KeyPair } from 'near-api-js';
+import { AccountDoesNotExistError } from 'near-api-js/rpc-errors';
 
 export const NETWORKS = {
   testnet: {
@@ -57,7 +58,8 @@ export async function createFaucetAccount(prefix = 'leash') {
   }
   throw new Error(
     `Could not create a testnet account through the faucet (${lastError.message}). ` +
-      'Set NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY to use an existing testnet account with at least 8 NEAR.',
+      'The faucet limits how many accounts one IP address can create per day. ' +
+      'Set NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY to use an existing testnet account with at least 6 NEAR.',
   );
 }
 
@@ -79,6 +81,24 @@ export async function fundedAccount(provider, prefix) {
     secretKey: created.secretKey,
     fromFaucet: true,
   };
+}
+
+/**
+ * Sub-account names for one run under `ownerId`.
+ * A fresh owner gets plain names (`wallet.<owner>`, `shop.<owner>`). An owner that
+ * already has a wallet from an earlier run gets a suffix, so a second run on the
+ * same account does not collide with the first.
+ * Returns { suffix, id(name) }.
+ */
+export async function runNames(provider, ownerId) {
+  let suffix = '';
+  try {
+    await provider.viewAccount({ accountId: `wallet.${ownerId}`, finality: 'final' });
+    suffix = `-${Date.now().toString(36)}`;
+  } catch (error) {
+    if (!(error instanceof AccountDoesNotExistError)) throw error;
+  }
+  return { suffix, id: (name) => `${name}${suffix}.${ownerId}` };
 }
 
 export async function waitForAccount(provider, accountId, timeoutMs = 30000) {

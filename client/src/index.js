@@ -5,6 +5,7 @@ export {
   createFaucetAccount,
   fundedAccount,
   waitForAccount,
+  runNames,
   newKeyPair,
   publicKeyOf,
   txUrl,

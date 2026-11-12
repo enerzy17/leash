@@ -24,6 +24,7 @@ import {
   fundedAccount,
   lockWallet,
   newKeyPair,
+  runNames,
   testnetProvider,
   txUrl,
 } from '../client/src/index.js';
@@ -94,8 +95,9 @@ async function main() {
   const ownerId = funded.accountId;
   say(`owner     ${ownerId}${funded.fromFaucet ? '  (new, from the testnet faucet)' : ''}`);
 
-  const shop = `shop.${ownerId}`;
-  const attacker = `attacker.${ownerId}`;
+  const names = await runNames(provider, ownerId);
+  const shop = names.id('shop');
+  const attacker = names.id('attacker');
   await owner.signAndSendTransactions({
     transactions: [shop, attacker].map((receiverId) => ({
       receiverId,
@@ -106,10 +108,10 @@ async function main() {
   dim(`shop      ${shop}        the one account the agent may pay`);
   dim(`attacker  ${attacker}    not on any list`);
 
-  const deployed = await deployWallet({ owner, fundNear: '6' });
+  const deployed = await deployWallet({ owner, prefix: `wallet${names.suffix}`, fundNear: '4' });
   const walletId = deployed.walletId;
   const leash = new LeashOwner(owner, walletId);
-  say(`wallet    ${walletId}  funded with 6 NEAR, Leash contract deployed`);
+  say(`wallet    ${walletId}  funded with 4 NEAR, Leash contract deployed`);
   dim(`          tx ${txUrl(deployed.txHash)}`);
 
   const agentKey = newKeyPair();
@@ -127,7 +129,7 @@ async function main() {
   say(`agent key ${short(agentKey.publicKey)}  policy stored on chain:`);
   line('plain', `          pay only ${shop}`);
   line('plain', '          up to 0.1 NEAR per payment, 0.3 NEAR per hour, 2 NEAR in total');
-  line('plain', '          0.1 to 1 NEAR needs the owner to approve; 3 denied payments in a row kill the key');
+  line('plain', '          0.1 to 1 NEAR needs the owner to approve; 3 denied payments kill the key');
   dim(`          tx ${txUrl(added.txHash)}`);
 
   const locked = await lockWallet({ provider, walletId, setupSecretKey: deployed.setupSecretKey });

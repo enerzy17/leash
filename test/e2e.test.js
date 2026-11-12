@@ -4,7 +4,8 @@
 //
 // A fresh funded account comes from the public testnet faucet, or from
 // NEAR_ACCOUNT_ID / NEAR_PRIVATE_KEY when both are set. Tests run in order
-// and share one wallet, because each deployment locks about 2.5 NEAR of storage.
+// and share one wallet, because each deployment locks about 2.4 NEAR of storage.
+// One run needs about 5.2 NEAR.
 
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
@@ -18,6 +19,7 @@ import {
   fundedAccount,
   lockWallet,
   newKeyPair,
+  runNames,
   sleep,
   testnetProvider,
 } from '../client/src/index.js';
@@ -99,15 +101,16 @@ describe('Leash on NEAR testnet', { concurrency: false }, () => {
     const funded = await fundedAccount(provider, 'leash-test');
     owner = funded.account;
     ownerId = funded.accountId;
-    shop = `shop.${ownerId}`;
-    ghost = `ghost.${ownerId}`;
-    attacker = `attacker.${ownerId}`;
+    const names = await runNames(provider, ownerId);
+    shop = names.id('shop');
+    ghost = names.id('ghost');
+    attacker = names.id('attacker');
     const strangerKey = newKeyPair();
-    await owner.createSubAccount({ accountOrPrefix: 'shop', publicKey: newKeyPair().publicKey, nearToTransfer: nearToYocto('0.01') });
-    await owner.createSubAccount({ accountOrPrefix: 'stranger', publicKey: strangerKey.publicKey, nearToTransfer: nearToYocto('0.1') });
-    stranger = new Account(`stranger.${ownerId}`, provider, strangerKey.secretKey);
+    await owner.createSubAccount({ accountOrPrefix: shop, publicKey: newKeyPair().publicKey, nearToTransfer: nearToYocto('0.01') });
+    await owner.createSubAccount({ accountOrPrefix: names.id('stranger'), publicKey: strangerKey.publicKey, nearToTransfer: nearToYocto('0.1') });
+    stranger = new Account(names.id('stranger'), provider, strangerKey.secretKey);
     strangerSecretKey = strangerKey.secretKey;
-    const deployed = await deployWallet({ owner, fundNear: '6' });
+    const deployed = await deployWallet({ owner, prefix: `wallet${names.suffix}`, fundNear: '5' });
     walletId = deployed.walletId;
     setupSecretKey = deployed.setupSecretKey;
     setupPublicKey = deployed.setupPublicKey;
@@ -120,7 +123,7 @@ describe('Leash on NEAR testnet', { concurrency: false }, () => {
     assert.equal(info.owner_id, ownerId);
     assert.equal(info.frozen, false);
     assert.equal(info.agents, 0);
-    assert.ok(BigInt(info.available) > nearToYocto('2'), `available ${info.available}`);
+    assert.ok(BigInt(info.available) > nearToYocto('1.9'), `available ${info.available}`);
   });
 
   test('the contract cannot be initialised a second time', async () => {
@@ -454,7 +457,8 @@ describe('Leash on NEAR testnet', { concurrency: false }, () => {
     assert.equal((await leash.info()).frozen, false);
     const paid = await agent.pay(shop, N('0.01'));
     assert.equal(paid.outcome, 'allowed');
-    assert.equal(paid.strikes, 0, 'an allowed payment clears earlier strikes');
+    assert.equal(paid.strikes, strikesBefore, 'an allowed payment does not clear earlier strikes');
+    assert.ok(strikesBefore >= 1);
 
     await leash.removeGuardian(keys.guardian.publicKey);
     assert.ok(!(await walletKeys()).some((k) => k.public_key === keys.guardian.publicKey));
@@ -465,6 +469,7 @@ describe('Leash on NEAR testnet', { concurrency: false }, () => {
     const parked = await agent.pay(shop, N('0.5'), 'parked before the policy change');
     assert.equal(parked.outcome, 'needs_approval');
     await leash.updatePolicy(keys.shopper.publicKey, policy({ receivers: [stranger.accountId], per_tx_limit: N('0.02'), approval_limit: null }));
+    assert.equal((await agent.policy()).usage.strikes, 0, 'only the owner clears strikes, by setting a policy');
     assert.equal((await agent.check(shop, N('0.01'))).reason, 'receiver_not_allowed');
     assert.equal((await agent.check(stranger.accountId, N('0.03'))).reason, 'over_per_tx_limit');
     const paid = await agent.pay(stranger.accountId, N('0.02'));

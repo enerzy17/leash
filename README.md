@@ -14,7 +14,7 @@ The money sits in a NEAR account that runs the Leash contract. A separate owner 
 
 1. **The NEAR protocol.** `add_agent` makes the contract add the agent's public key to the wallet account as a *function-call access key* scoped to one method, `pay`, on the wallet itself. NEAR rejects anything else that key signs before it reaches any contract: transfers, other methods, other contracts, key changes, code deploys, account deletion.
 2. **The contract.** `pay` looks up the policy stored for the signing key and decides: allow, park for the owner, or deny.
-3. **The tripwire.** Denials are returned, not thrown, so they are written to the chain and counted. After `max_strikes` denials in a row the contract freezes the agent and deletes its key from the account.
+3. **The tripwire.** Denials are returned, not thrown, so they are written to the chain and counted. After `max_strikes` denials the contract freezes the agent and deletes its key from the account. An allowed payment does not clear strikes; only the owner does, by setting the policy again.
 
 A policy is stored per agent key:
 
@@ -26,7 +26,7 @@ A policy is stored per agent key:
 | `lifetime_limit` | most the key can ever spend on its own (optional) |
 | `approval_limit` | payments above `per_tx_limit` up to this amount are parked for the owner to approve or reject (optional) |
 | `expires_at_ms` | the key stops paying after this time (optional) |
-| `max_strikes` | denied payments in a row that kill the key (0 turns it off) |
+| `max_strikes` | denied payments that kill the key (0 turns it off) |
 
 Who can do what:
 
@@ -50,7 +50,7 @@ npm run demo
 
 Do that and you see one full run, about a minute:
 
-- a wallet is created and funded with 6 testnet NEAR, an agent key is added, the setup key is deleted
+- a wallet is created and funded with 4 testnet NEAR, an agent key is added, the setup key is deleted
 - the agent makes two payments inside its policy: `ALLOWED`
 - the agent asks for 0.5 NEAR, above its 0.1 limit: `PARKED`, then the owner approves it
 - the agent is told by a "poisoned page" to send 3 NEAR to an attacker: `REFUSED` by the agent wrapper before anything is signed
@@ -72,33 +72,33 @@ cargo test
 
 Do that (needs Rust; `rust-toolchain.toml` pins 1.95.0) and you see `23 passed`. These are unit tests of the policy engine (`policy/src/lib.rs`), which has no NEAR dependency.
 
-If the faucet or the public RPC is down, set `NEAR_ACCOUNT_ID` and `NEAR_PRIVATE_KEY` to an existing testnet account with at least 8 NEAR, and `NEAR_RPC_URL` to another testnet RPC endpoint.
+The faucet gives 10 NEAR per new account and limits how many accounts one IP address can create per day (it stopped us after about ten in one day). If it refuses, or to reuse one account for several runs, set `NEAR_ACCOUNT_ID` and `NEAR_PRIVATE_KEY` to an existing testnet account. The demo needs about 4.1 NEAR and the tests about 5.2 NEAR per run, most of it locked as storage for the deployed contract. A second run on the same account uses suffixed sub-account names so it does not collide with the first. Set `NEAR_RPC_URL` to use another testnet RPC endpoint.
 
-To rebuild the contract yourself: `npm run build:contract` (needs Rust). It runs `cargo build` for `wasm32-unknown-unknown` and then `wasm-opt`, and prints the size and sha256 of `res/leash.wasm`. The committed file is 234,682 bytes, sha256 `da7571b4e080f192729bbfb2b5324461a0f1c0b1e5ea7a83423a086eea0057c6`. A rebuild from a clean copy on the build machine (Windows, Rust 1.95.0) gave the same hash; another platform may give a different one.
+To rebuild the contract yourself: `npm run build:contract` (needs Rust). It runs `cargo build` for `wasm32-unknown-unknown` and then `wasm-opt`, and prints the size and sha256 of `res/leash.wasm`. The committed file is 234,675 bytes, sha256 `958019d5d00f8d689d6ec57c47a314a7c94d5a58438eb0ab111ba53d64b1d3c5`. A rebuild from a clean copy on the build machine (Windows, Rust 1.95.0) gave the same hash; another platform may give a different one.
 
 ## A recorded run
 
-The demo video, [docs/leash-demo.mp4](docs/leash-demo.mp4) (55 seconds), is a replay of this run: the terminal log on the left, the wallet's on-chain state on the right. The full terminal log is in [docs/recorded-run.txt](docs/recorded-run.txt) and the timed data in [docs/recorded-run.json](docs/recorded-run.json).
+The demo video, [docs/leash-demo.mp4](docs/leash-demo.mp4) (53 seconds), is a replay of this run: the terminal log on the left, the wallet's on-chain state on the right. The full terminal log is in [docs/recorded-run.txt](docs/recorded-run.txt) and the timed data in [docs/recorded-run.json](docs/recorded-run.json).
 
 ![Last frame of the demo: attacker received 0 NEAR, the agent key is deleted](docs/leash-demo-end.png)
 
 <!-- recorded-run:start -->
-- Wallet: [`wallet.leash-demo-1794522609788-707685.testnet`](https://testnet.nearblocks.io/address/wallet.leash-demo-1794522609788-707685.testnet)
-- Owner: [`leash-demo-1794522609788-707685.testnet`](https://testnet.nearblocks.io/address/leash-demo-1794522609788-707685.testnet)
-- Attacker account (received nothing): [`attacker.leash-demo-1794522609788-707685.testnet`](https://testnet.nearblocks.io/address/attacker.leash-demo-1794522609788-707685.testnet)
+- Wallet: [`wallet.leash-probe-1794520670768.testnet`](https://testnet.nearblocks.io/address/wallet.leash-probe-1794520670768.testnet)
+- Owner: [`leash-probe-1794520670768.testnet`](https://testnet.nearblocks.io/address/leash-probe-1794520670768.testnet)
+- Attacker account (received nothing): [`attacker.leash-probe-1794520670768.testnet`](https://testnet.nearblocks.io/address/attacker.leash-probe-1794520670768.testnet)
 
 | Step | Transaction |
 | --- | --- |
-| Wallet created, funded, contract deployed and initialised (one transaction) | [`E3Vo9Cg4om...`](https://testnet.nearblocks.io/txns/E3Vo9Cg4ommQbamxQBQCPF7dD62Ur7PZU7UvgF7QuBZv) |
-| Agent key added with its policy | [`GdQrmtd5hW...`](https://testnet.nearblocks.io/txns/GdQrmtd5hWL8DsUZLnnDMYsK8cR3Q7xtijuZGWrh76V4) |
-| Setup key deleted, wallet locked | [`Ggh59H2huT...`](https://testnet.nearblocks.io/txns/Ggh59H2huTbHFD82sYdyVKyjhEEKKJ83g7WACPjdEjLn) |
-| Allowed: 0.05 NEAR to shop for "api credits" | [`AgiCr8HAos...`](https://testnet.nearblocks.io/txns/AgiCr8HAosYXhMZhEWvTFGkbfvSLxP7DbYRFAFhybfxb) |
-| Allowed: 0.08 NEAR to shop for "dataset licence" | [`3JHRK8SKDN...`](https://testnet.nearblocks.io/txns/3JHRK8SKDNKGoPhiy8AZFCqHnMXXWYMePyWiBu2Xdvvu) |
-| Parked for the owner: 0.5 NEAR, above the per-payment limit | [`7zF1D8NWyi...`](https://testnet.nearblocks.io/txns/7zF1D8NWyiWoDW794YdqPEG9HhqzQkmVGVB5uq2L1Zfk) |
-| Owner approves the parked payment | [`DbkpiXAmoF...`](https://testnet.nearblocks.io/txns/DbkpiXAmoFKMhYtQfB76JRpVvgCMkhDkeHrFHC8Rsjv4) |
-| Denied by the contract: 0.1 NEAR to attacker: receiver_not_allowed, strike 1 | [`4yS78nAL19...`](https://testnet.nearblocks.io/txns/4yS78nAL19428M5YaYG77RDai5afQ7YWxqbS3ubDn5YB) |
-| Denied by the contract: 0.05 NEAR to attacker: receiver_not_allowed, strike 2 | [`HQakxHSUFw...`](https://testnet.nearblocks.io/txns/HQakxHSUFwefQScKBKsMdskGSF7ECVzVrmfLvQJaVeC4) |
-| Denied by the contract: 0.01 NEAR to attacker: receiver_not_allowed, strike 3 | [`exwTjFJjWx...`](https://testnet.nearblocks.io/txns/exwTjFJjWxrvb46j7R3qrftCMq2hWPsVr2iMBZkZhpr) |
+| Wallet created, funded, contract deployed and initialised (one transaction) | [`GsKGq8frdA...`](https://testnet.nearblocks.io/txns/GsKGq8frdAhUjBvdBj9JPcNKc3Vwyvc3bV1MqVPWcwth) |
+| Agent key added with its policy | [`7dHPuJT5Cj...`](https://testnet.nearblocks.io/txns/7dHPuJT5CjYQW7TzX9hsVf33bmxCmwBETUAwr7UQnWMp) |
+| Setup key deleted, wallet locked | [`5iHt1g2NFM...`](https://testnet.nearblocks.io/txns/5iHt1g2NFMhyTHaPjr5dprSk95qKwDSSoBbBNpdTkSrF) |
+| Allowed: 0.05 NEAR to shop for "api credits" | [`EzbMPQsDun...`](https://testnet.nearblocks.io/txns/EzbMPQsDunUop5tJAYh5vZoDKGC3Nnjn4Veredt8PLWs) |
+| Allowed: 0.08 NEAR to shop for "dataset licence" | [`9m8VhYjyDF...`](https://testnet.nearblocks.io/txns/9m8VhYjyDFg7ZvZHcnaaAW21TFVvpYpgxAXDaWvyaXKa) |
+| Parked for the owner: 0.5 NEAR, above the per-payment limit | [`DDnUBVjtaa...`](https://testnet.nearblocks.io/txns/DDnUBVjtaaK4QM2Qjcb2nxMQR2e7doAHZZT1rs3xd7MT) |
+| Owner approves the parked payment | [`J9jYV8L1tp...`](https://testnet.nearblocks.io/txns/J9jYV8L1tpvAeZ48JgYbxqYDLmpbFLUi8tHEpAGMa24v) |
+| Denied by the contract: 0.1 NEAR to attacker: receiver_not_allowed, strike 1 | [`Dvbx84wnvF...`](https://testnet.nearblocks.io/txns/Dvbx84wnvFM6pQNwXk2SByZcJU72FcfApgUMr4mfa9PU) |
+| Denied by the contract: 0.05 NEAR to attacker: receiver_not_allowed, strike 2 | [`22m9sDzKv2...`](https://testnet.nearblocks.io/txns/22m9sDzKv2G4p2zpz38sfLhb9oJ7qGkgsHERKnD3U9nt) |
+| Denied by the contract: 0.01 NEAR to attacker: receiver_not_allowed, strike 3 | [`7doFpEXtdL...`](https://testnet.nearblocks.io/txns/7doFpEXtdLZDepHEG74q5j78LkXsvkdR3tzmWCS5bJK9) |
 
 The four attempts that the protocol rejected (direct transfer, owner method, adding a key, replacing the code) and the last attempt with the deleted key have no transaction hash: NEAR refuses them before they are included in a block.
 <!-- recorded-run:end -->
@@ -168,7 +168,8 @@ The owner is just an account id. It can be a person's account, a multisig, or a 
 - **Testnet only, not audited.** One automated security review was run during the build and its findings were fixed or are listed here. Do not put real money in it as is.
 - **Native NEAR only.** No NEP-141 tokens yet, so no stablecoins.
 - **Windows are fixed, not rolling.** A key can spend up to twice `window_limit` across a window boundary (end of one window, start of the next).
-- **The tripwire catches loud misuse, not careful misuse.** `check_payment` is a public view, so a thief can learn what would be denied without sending anything, and an allowed payment resets the strike count. A careful thief is held by the policy limits, not by the tripwire.
+- **The tripwire catches loud misuse, not careful misuse.** `check_payment` is a public view, so a thief can learn what would be denied without sending anything and never earn a strike. A careful thief is held by the policy limits, not by the tripwire.
+- **Strikes do not expire.** An honest agent that uses the wrapper does not earn them, except in a race where the wallet's state changes between the check and the payment. The owner clears them with `update_policy`.
 - **Gas is outside the policy.** Each key can burn its gas allowance. The wallet keeps 0.5 NEAR back for gas; several compromised keys together could burn more than that, which would stop agent and guardian transactions until the wallet is topped up. Owner calls are not affected.
 - **No upgrade and no owner change.** Once locked, the code is fixed and `owner_id` cannot be changed. If the owner account is lost, the wallet's funds are stuck. The storage stake (about 2.4 NEAR for the contract code) and the 0.5 NEAR reserve cannot be withdrawn.
 - **Locking is the owner's step.** Until `lockWallet` runs, the setup key is a full-access key on the wallet. `lockWallet` reads the key list back and fails if any full-access key remains.

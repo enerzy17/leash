@@ -122,7 +122,7 @@ pub struct Decision {
     pub reason: Option<String>,
     /// Set when the payment was parked for the owner.
     pub request_id: Option<u64>,
-    /// Denied payments in a row for this key, after this call.
+    /// Denied payments counted against this key, after this call.
     pub strikes: u32,
     /// True when this call froze the key and removed it from the account.
     pub tripped: bool,
