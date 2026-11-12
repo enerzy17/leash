@@ -1,0 +1,13 @@
+[workspace]
+members = ["policy", "contract"]
+default-members = ["policy"]
+resolver = "2"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+strip = true
+panic = "abort"
+overflow-checks = true

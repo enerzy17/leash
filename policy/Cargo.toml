@@ -1,0 +1,13 @@
+[package]
+name = "leash-policy"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Chain-agnostic spending policy engine used by the Leash wallet contract"
+
+[dependencies]
+borsh = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

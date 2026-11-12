@@ -1,0 +1,5 @@
+# near-sdk only talks to the NEAR host when built with `--cfg near`.
+# cargo-near sets this flag itself; here it is set for the wasm target so that
+# a plain `cargo build --target wasm32-unknown-unknown` produces a working contract.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=-s", "--cfg", "near"]

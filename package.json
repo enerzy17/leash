@@ -1,0 +1,24 @@
+{
+  "name": "leash",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Leash: an on-chain spending policy wallet for AI agents on NEAR",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "dependencies": {
+    "near-api-js": "^7.5.3"
+  },
+  "devDependencies": {
+    "binaryen": "^132.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/e2e.test.js",
+    "test:policy": "cargo test",
+    "demo": "node scripts/demo.js",
+    "build:contract": "node scripts/build-contract.js"
+  },
+  "exports": "./client/src/index.js"
+}

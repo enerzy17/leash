@@ -1,0 +1,13 @@
+[package]
+name = "leash-contract"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Leash: a NEAR wallet contract that enforces per-agent spending policies"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.30.1"
+leash-policy = { path = "../policy" }

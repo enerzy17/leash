@@ -1,0 +1,7 @@
+node_modules/
+target/
+.leash/
+*.log
+.env
+demo-out/
+.omc/
