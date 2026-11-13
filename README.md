@@ -195,7 +195,7 @@ The owner is just an account id. It can be a person's account, a multisig, or a 
 - All code in this repository was written on 12 November 2026, inside the hackathon window. There is no earlier baseline.
 - Libraries: [near-sdk](https://crates.io/crates/near-sdk) 5.30.1, [borsh](https://crates.io/crates/borsh), [serde](https://crates.io/crates/serde), [near-api-js](https://www.npmjs.com/package/near-api-js) 7.5.3, [binaryen](https://www.npmjs.com/package/binaryen) (wasm-opt, build only). No template or boilerplate was used.
 - The code and text were written with an AI coding agent (Claude Code) directed and reviewed by the author.
-- Per rule Q-015: the same author has a second, independent submission to this hackathon. It is named in [OTHER_PROJECT.md](OTHER_PROJECT.md).
+- Per rule Q-015: the same author has a second, independent submission to this hackathon. It is **Epoch Ledger** (https://github.com/enerzy17/epoch-ledger), a data-backed investment thesis for NEAR in the Investment Thesis track. The two share no code and no data. See [OTHER_PROJECT.md](OTHER_PROJECT.md).
 
 ## License
 
